@@ -95,35 +95,36 @@ def evaluate(model, loader, criterion):
             total += labels.size(0)
     return running_loss / total, correct / total
 
-model = CNN().to(device)
-criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=0.05, momentum=0.9)
-EPOCHS = 20
+if __name__ == "__main__":
+    model = CNN().to(device)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.05, momentum=0.9)
+    EPOCHS = 20
 
-scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer, T_max=EPOCHS)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer, T_max=EPOCHS)
 
 
-for epoch in range(EPOCHS):
-    train_loss, train_acc = train(model, train_loader, criterion, optimizer)
-    test_loss, test_acc = evaluate(model, test_loader, criterion)
-    scheduler.step()
-    print(f"Epoch {epoch + 1:2d}/{EPOCHS}  "
-          f"train loss {train_loss:.4f} acc {train_acc:.2%}  |  "
-          f"test loss {test_loss:.4f} acc {test_acc:.2%}")
+    for epoch in range(EPOCHS):
+        train_loss, train_acc = train(model, train_loader, criterion, optimizer)
+        test_loss, test_acc = evaluate(model, test_loader, criterion)
+        scheduler.step()
+        print(f"Epoch {epoch + 1:2d}/{EPOCHS}  "
+            f"train loss {train_loss:.4f} acc {train_acc:.2%}  |  "
+            f"test loss {test_loss:.4f} acc {test_acc:.2%}")
 
-model.eval()
-images, labels = next(iter(test_loader))
-images = images.to(device)
+    model.eval()
+    images, labels = next(iter(test_loader))
+    images = images.to(device)
 
-with torch.no_grad():
-    logits = model(images)                    # (64, 10) raw scores
-    probs = torch.softmax(logits, dim=1)      # (64, 10) probabilities, each row sums to 1
-    preds = probs.argmax(dim=1)               # (64,) predicted class index
+    with torch.no_grad():
+        logits = model(images)                    # (64, 10) raw scores
+        probs = torch.softmax(logits, dim=1)      # (64, 10) probabilities, each row sums to 1
+        preds = probs.argmax(dim=1)               # (64,) predicted class index
 
-for i in range(8):
-    guess = train_set.classes[preds[i]]
-    truth = train_set.classes[labels[i]]
-    conf = probs[i, preds[i]].item()
-    print(f"guess: {guess:10s} ({conf:.0%})   actual: {truth}")
+    for i in range(8):
+        guess = train_set.classes[preds[i]]
+        truth = train_set.classes[labels[i]]
+        conf = probs[i, preds[i]].item()
+        print(f"guess: {guess:10s} ({conf:.0%})   actual: {truth}")
 
-torch.save(model.state_dict(), "cnn_cifar10.pt")
+    torch.save(model.state_dict(), "cnn_cifar10.pt")
