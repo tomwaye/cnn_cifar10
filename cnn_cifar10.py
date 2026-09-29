@@ -22,10 +22,10 @@ test_transform = transforms.Compose([
 train_set = datasets.CIFAR10(root="./data", train=True, download=True, transform=train_transform)
 test_set = datasets.CIFAR10(root="./data", train=False, download=True, transform=test_transform)
 
-BATCH_SIZE = 64
+BATCH_SIZE = 128
 
 train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True)
-test_loader = DataLoader(test_set, batch_size=BATCH_SIZE, shuffle=False)
+test_loader = DataLoader(test_set, batch_size=512, shuffle=False)
 
 class CNN(nn.Module):
     def __init__(self):
@@ -98,7 +98,7 @@ def evaluate(model, loader, criterion):
 model = CNN().to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.05, momentum=0.9)
-EPOCHS = 10
+EPOCHS = 20
 
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer, T_max=EPOCHS)
 
@@ -125,3 +125,5 @@ for i in range(8):
     truth = train_set.classes[labels[i]]
     conf = probs[i, preds[i]].item()
     print(f"guess: {guess:10s} ({conf:.0%})   actual: {truth}")
+
+torch.save(model.state_dict(), "cnn_cifar10.pt")
