@@ -32,16 +32,23 @@ class CNN(nn.Module):
         super().__init__()
         self.features = nn.Sequential(
             nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2),
 
             nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2)
         )
         self.classifier = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(in_features=4096, out_features=128),
+            nn.Linear(in_features=2048, out_features=128),
             nn.ReLU(),
             nn.Linear(in_features=128, out_features=10)
         )
@@ -90,12 +97,16 @@ def evaluate(model, loader, criterion):
 
 model = CNN().to(device)
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+optimizer = torch.optim.SGD(model.parameters(), lr=0.05, momentum=0.9)
 EPOCHS = 10
+
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer, T_max=EPOCHS)
+
 
 for epoch in range(EPOCHS):
     train_loss, train_acc = train(model, train_loader, criterion, optimizer)
     test_loss, test_acc = evaluate(model, test_loader, criterion)
+    scheduler.step()
     print(f"Epoch {epoch + 1:2d}/{EPOCHS}  "
           f"train loss {train_loss:.4f} acc {train_acc:.2%}  |  "
           f"test loss {test_loss:.4f} acc {test_acc:.2%}")
