@@ -8,13 +8,19 @@ device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 CIFAR_MEAN = (0.4914, 0.4822, 0.4465)
 CIFAR_STD = (0.2470, 0.2435, 0.2616)
 
-transform = transforms.Compose([
+train_transform = transforms.Compose([
+    transforms.RandomHorizontalFlip(),
+    transforms.RandomCrop(size=32, padding=4),
+    transforms.ToTensor(),
+    transforms.Normalize(CIFAR_MEAN, CIFAR_STD)
+])
+test_transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize(CIFAR_MEAN, CIFAR_STD)
 ])
 
-train_set = datasets.CIFAR10(root="./data", train=True, download=True, transform=transform)
-test_set = datasets.CIFAR10(root="./data", train=False, download=True, transform=transform)
+train_set = datasets.CIFAR10(root="./data", train=True, download=True, transform=train_transform)
+test_set = datasets.CIFAR10(root="./data", train=False, download=True, transform=test_transform)
 
 BATCH_SIZE = 64
 
@@ -84,8 +90,8 @@ def evaluate(model, loader, criterion):
 
 model = CNN().to(device)
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-EPOCHS = 5
+optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+EPOCHS = 10
 
 for epoch in range(EPOCHS):
     train_loss, train_acc = train(model, train_loader, criterion, optimizer)
@@ -94,3 +100,17 @@ for epoch in range(EPOCHS):
           f"train loss {train_loss:.4f} acc {train_acc:.2%}  |  "
           f"test loss {test_loss:.4f} acc {test_acc:.2%}")
 
+model.eval()
+images, labels = next(iter(test_loader))
+images = images.to(device)
+
+with torch.no_grad():
+    logits = model(images)                    # (64, 10) raw scores
+    probs = torch.softmax(logits, dim=1)      # (64, 10) probabilities, each row sums to 1
+    preds = probs.argmax(dim=1)               # (64,) predicted class index
+
+for i in range(8):
+    guess = train_set.classes[preds[i]]
+    truth = train_set.classes[labels[i]]
+    conf = probs[i, preds[i]].item()
+    print(f"guess: {guess:10s} ({conf:.0%})   actual: {truth}")
